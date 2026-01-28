@@ -115,3 +115,7 @@ def main():
 # Punto de entrada del script
 if __name__ == "__main__":
     main()
+
+    # TODO: eliminar menú por consola
+# TODO: convertir estas funciones en lógica reutilizable
+# TODO: exponer endpoints con FastAPI
