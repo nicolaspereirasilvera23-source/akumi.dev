@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVC - Control de Ingreso</title>
+    <style>
+        :root {
+            --verde-svc: #006837;
+            --rojo-svc: #be1e2d;
+            --negro-svc: #000000;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--negro-svc) 0%, #1a1a1a 100%);
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 20px;
+            border: 2px solid var(--verde-svc);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+            width: 320px;
+        }
+
+        .logo {
+            width: 180px;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
+            margin-bottom: 10px;
+        }
+
+        h1 { font-size: 1.5rem; margin-bottom: 20px; color: white; }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background: #222;
+            color: white;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        input:focus { border-color: var(--rojo-svc); }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: var(--rojo-svc);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover { background: var(--verde-svc); transform: scale(1.02); }
+
+        #resultado { margin-top: 20px; font-weight: bold; min-height: 50px; }
+    </style>
+</head>
+<body>
+
+    <img src="logo.png" alt="Suarez Voley Club" class="logo">
+    
+    <div class="container">
+        <h1>INGRESO DE JUGADORES</h1>
+        <input type="text" id="nombreInput" placeholder="Escribí tu nombre aquí...">
+        <button onclick="verificar()">CONFIRMAR</button>
+        <div id="resultado"></div>
+    </div>
+
+    <script>
+        async function verificar() {
+            const nombre = document.getElementById('nombreInput').value;
+            const resDiv = document.getElementById('resultado');
+            
+            if(!nombre) return;
+
+            resDiv.innerHTML = "Buscando...";
+            
+            try {
+                // Mañana conectamos esta URL con tu FastAPI
+                const response = await fetch(`http://127.0.0.1:8000/verificar/${nombre}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    resDiv.innerHTML = `<span style="color: #4cd137;">✅ BIENVENIDO/A<br>${data.datos.nombre.toUpperCase()}</span>`;
+                } else {
+                    resDiv.innerHTML = `<span style="color: #e84118;">❌ NO ENCONTRADO<br>Consulte en secretaría</span>`;
+                }
+            } catch (error) {
+                resDiv.innerHTML = "⚠️ Servidor desconectado";
+            }
+        }
+    </script>
+</body>
+</html>
