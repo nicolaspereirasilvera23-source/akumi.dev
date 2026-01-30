@@ -4,11 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SVC - Control de Ingreso</title>
+
     <style>
         :root {
             --verde-svc: #006837;
             --rojo-svc: #be1e2d;
             --negro-svc: #000000;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
@@ -21,6 +26,13 @@
             justify-content: center;
             height: 100vh;
             margin: 0;
+            gap: 20px;
+        }
+
+        .logo {
+            width: 180px;
+            max-width: 80%;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
         }
 
         .container {
@@ -33,13 +45,11 @@
             width: 320px;
         }
 
-        .logo {
-            width: 180px;
-            filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
-            margin-bottom: 10px;
+        h1 {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            color: white;
         }
-
-        h1 { font-size: 1.5rem; margin-bottom: 20px; color: white; }
 
         input {
             width: 100%;
@@ -49,11 +59,12 @@
             border: 1px solid #444;
             background: #222;
             color: white;
-            box-sizing: border-box;
             outline: none;
         }
 
-        input:focus { border-color: var(--rojo-svc); }
+        input:focus {
+            border-color: var(--rojo-svc);
+        }
 
         button {
             width: 100%;
@@ -64,48 +75,77 @@
             border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
-            transition: 0.3s;
+            transition: 0.25s ease;
         }
 
-        button:hover { background: var(--verde-svc); transform: scale(1.02); }
+        button:hover {
+            background: var(--verde-svc);
+            transform: scale(1.02);
+        }
 
-        #resultado { margin-top: 20px; font-weight: bold; min-height: 50px; }
+        #resultado {
+            margin-top: 20px;
+            font-weight: bold;
+            min-height: 50px;
+        }
     </style>
 </head>
+
 <body>
 
-    <img src="svc.png" alt="Suarez Voley Club" class="logo">
-    
+    <!-- LOGO -->
+    <img src="/static/svc.png" alt="Suarez Voley Club" class="logo">
+
+    <!-- CARD -->
     <div class="container">
         <h1>INGRESO DE JUGADORES</h1>
-        <input type="text" id="nombreInput" placeholder="Escribí tu nombre aquí...">
+
+        <input
+            type="text"
+            id="nombreInput"
+            placeholder="Escribí tu nombre aquí..."
+            autocomplete="off"
+        >
+
         <button onclick="verificar()">CONFIRMAR</button>
+
         <div id="resultado"></div>
     </div>
 
     <script>
         async function verificar() {
-            const nombre = document.getElementById('nombreInput').value;
-            const resDiv = document.getElementById('resultado');
-            
-            if(!nombre) return;
+            const nombre = document.getElementById("nombreInput").value.trim();
+            const resDiv = document.getElementById("resultado");
 
-            resDiv.innerHTML = "Buscando...";
-            
+            if (!nombre) return;
+
+            resDiv.textContent = "Buscando...";
+
             try {
-                // Mañana conectamos esta URL con tu FastAPI
-                const response = await fetch(`http://127.0.0.1:8000/verificar/${nombre}`);
+                const response = await fetch(`/verificar/${nombre}`);
                 const data = await response.json();
 
-                if (response.ok) {
-                    resDiv.innerHTML = `<span style="color: #4cd137;">✅ BIENVENIDO/A<br>${data.datos.nombre.toUpperCase()}</span>`;
+                if (data.existe) {
+                    resDiv.innerHTML = `
+                        <span style="color:#4cd137;">
+                            ✅ BIENVENIDO/A<br>
+                            ${data.nombre.toUpperCase()}
+                        </span>
+                    `;
                 } else {
-                    resDiv.innerHTML = `<span style="color: #e84118;">❌ NO ENCONTRADO<br>Consulte en secretaría</span>`;
+                    resDiv.innerHTML = `
+                        <span style="color:#e84118;">
+                            ❌ NO ENCONTRADO<br>
+                            Consulte en secretaría
+                        </span>
+                    `;
                 }
-            } catch (error) {
-                resDiv.innerHTML = "⚠️ Servidor desconectado";
+            } catch (err) {
+                resDiv.textContent = "⚠️ Servidor desconectado";
+                console.error(err);
             }
         }
     </script>
+
 </body>
 </html>
