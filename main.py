@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 import sqlite3
 from datetime import datetime
+import pandas as pd # Necesitarás: pip install pandas openpyxl
 
 app = FastAPI()
 
@@ -111,19 +112,42 @@ def registrar_asistencia_db(nombre):
         )
         conn.commit()
         return {"exito": True}
+def exportar_asistencias_excel():
+    with sqlite3.connect(DB_NAME) as conn:
+        query = """
+            SELECT j.nombre AS Jugador, a.fecha AS Fecha, a.hora AS Hora
+            FROM asistencias a
+            JOIN jugadores j ON a.jugador_id = j.id
+            ORDER BY a.fecha DESC, a.hora DESC
+        """
+        df = pd.read_sql_query(query, conn)
+        df.to_excel("Reporte_SVC.xlsx", index=False)
+        print("✅ Reporte 'Reporte_SVC.xlsx' generado con éxito.")
 
 # ----------------------------
 # ENDPOINTS API
 # ----------------------------
 @app.get("/verificar/{nombre}")
 def verificar_jugador(nombre: str):
-    jugadores = listar_jugadores_db()
-    existe = any(j["nombre"].lower() == nombre.lower() for j in jugadores)
-    return {
-        "existe": existe,
-        "nombre": nombre
-    }
-
+    # 1. Intentamos registrar la asistencia directamente
+    # Esto ya busca si el jugador existe dentro de la función registrar_asistencia_db
+    resultado = registrar_asistencia_db(nombre)
+    
+    if resultado["exito"]:
+        # Si tuvo éxito, generamos la hora para mandársela al Front
+        ahora = datetime.now().strftime("%H:%M")
+        return {
+            "existe": True, 
+            "nombre": nombre,
+            "hora": ahora
+        }
+    else:
+        # Si no tuvo éxito (jugador no encontrado)
+        return {
+            "existe": False, 
+            "nombre": nombre,
+            "hora": None
+        }
 @app.post("/check-in/{nombre}")
 def check_in(nombre: str):
     resultado = registrar_asistencia_db(nombre)
@@ -150,7 +174,8 @@ def menu_consola():
         print("\n🏐 SUAREZ VOLEY CLUB")
         print("1. Agregar jugador")
         print("2. Listar jugadores")
-        print("3. Salir")
+        print("3. Generar Reporte Excel") # <-- Nueva función
+        print("4. Salir")                # <-- Pasamos Salir al 4
         op = input("Opción: ")
 
         if op == "1":
@@ -161,6 +186,8 @@ def menu_consola():
         elif op == "2":
             print(listar_jugadores_db())
         elif op == "3":
+            exportar_asistencias_excel() # <-- Aquí llamas a tu función de Pandas
+        elif op == "4":
             break
 
 if __name__ == "__main__":

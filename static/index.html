@@ -113,39 +113,56 @@
     </div>
 
     <script>
-        async function verificar() {
-            const nombre = document.getElementById("nombreInput").value.trim();
-            const resDiv = document.getElementById("resultado");
+    async function verificar() {
+        const nombreInput = document.getElementById("nombreInput");
+        const nombre = nombreInput.value.trim();
+        const resDiv = document.getElementById("resultado");
 
-            if (!nombre) return;
+        if (!nombre) return;
 
-            resDiv.textContent = "Buscando...";
+        resDiv.textContent = "Buscando...";
 
-            try {
-                const response = await fetch(`/verificar/${nombre}`);
-                const data = await response.json();
-
-                if (data.existe) {
-                    resDiv.innerHTML = `
-                        <span style="color:#4cd137;">
-                            ✅ BIENVENIDO/A<br>
-                            ${data.nombre.toUpperCase()}
-                        </span>
-                    `;
-                } else {
-                    resDiv.innerHTML = `
-                        <span style="color:#e84118;">
-                            ❌ NO ENCONTRADO<br>
-                            Consulte en secretaría
-                        </span>
-                    `;
-                }
-            } catch (err) {
-                resDiv.textContent = "⚠️ Servidor desconectado";
-                console.error(err);
+        try {
+            // Usamos la URL completa por seguridad si estás en local
+            const response = await fetch(`/verificar/${nombre}`);
+            
+            if (!response.ok) {
+                throw new Error("Error en la respuesta del servidor");
             }
+
+            const data = await response.json();
+
+            if (data.existe) {
+                resDiv.innerHTML = `
+                    <span style="color:#4cd137;">
+                        ✅ BIENVENIDO/A<br>
+                        <strong>${data.nombre.toUpperCase()}</strong><br>
+                        <small>Registrado a las: ${data.hora || 'Ahora'}</small>
+                    </span>
+                `;
+                // Limpiamos el input para el próximo jugador
+                nombreInput.value = ""; 
+            } else {
+                resDiv.innerHTML = `
+                    <span style="color:#be1e2d;">
+                        ❌ NO ENCONTRADO<br>
+                        <small>El jugador no está en la lista</small>
+                    </span>
+                `;
+            }
+        } catch (err) {
+            resDiv.innerHTML = `<span style="color:orange;">⚠️ Servidor desconectado</span>`;
+            console.error("Error de conexión:", err);
         }
-    </script>
+    }
+
+    // TIP EXTRA: Para que funcione al apretar "Enter"
+    document.getElementById("nombreInput").addEventListener("keypress", function(e) {
+        if (e.key === "Enter") {
+            verificar();
+        }
+    });
+</script>
 
 </body>
 </html>
