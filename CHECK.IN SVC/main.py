@@ -5,12 +5,12 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 import sqlite3
 from datetime import datetime
-import pandas as pd # Necesitarás: pip install pandas openpyxl
+import pandas as pd 
 
 app = FastAPI()
 
 # ----------------------------
-# ARCHIVOS ESTÁTICOS (HTML / IMG)
+# ARCHIVOS ESTÁTICOS
 # ----------------------------
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -112,6 +112,7 @@ def registrar_asistencia_db(nombre):
         )
         conn.commit()
         return {"exito": True}
+
 def exportar_asistencias_excel():
     with sqlite3.connect(DB_NAME) as conn:
         query = """
@@ -129,25 +130,13 @@ def exportar_asistencias_excel():
 # ----------------------------
 @app.get("/verificar/{nombre}")
 def verificar_jugador(nombre: str):
-    # 1. Intentamos registrar la asistencia directamente
-    # Esto ya busca si el jugador existe dentro de la función registrar_asistencia_db
     resultado = registrar_asistencia_db(nombre)
-    
     if resultado["exito"]:
-        # Si tuvo éxito, generamos la hora para mandársela al Front
         ahora = datetime.now().strftime("%H:%M")
-        return {
-            "existe": True, 
-            "nombre": nombre,
-            "hora": ahora
-        }
+        return {"existe": True, "nombre": nombre, "hora": ahora}
     else:
-        # Si no tuvo éxito (jugador no encontrado)
-        return {
-            "existe": False, 
-            "nombre": nombre,
-            "hora": None
-        }
+        return {"existe": False, "nombre": nombre, "hora": None}
+
 @app.post("/check-in/{nombre}")
 def check_in(nombre: str):
     resultado = registrar_asistencia_db(nombre)
@@ -167,27 +156,31 @@ def listar():
     return listar_jugadores_db()
 
 # ----------------------------
-# CONSOLA (NO SE TOCA)
+# CONSOLA
 # ----------------------------
 def menu_consola():
     while True:
         print("\n🏐 SUAREZ VOLEY CLUB")
         print("1. Agregar jugador")
         print("2. Listar jugadores")
-        print("3. Generar Reporte Excel") # <-- Nueva función
-        print("4. Salir")                # <-- Pasamos Salir al 4
+        print("3. Generar Reporte Excel")
+        print("4. Salir")
         op = input("Opción: ")
 
         if op == "1":
-            nombre = input("Nombre: ")
-            edad = int(input("Edad: "))
-            tiempo = int(input("Tiempo: "))
-            print(agregar_jugador_db(nombre, edad, tiempo))
+            try:
+                nombre = input("Nombre: ")
+                edad = int(input("Edad: "))
+                tiempo = int(input("Tiempo: "))
+                print(agregar_jugador_db(nombre, edad, tiempo))
+            except ValueError:
+                print("Error: Edad y Tiempo deben ser números.")
         elif op == "2":
             print(listar_jugadores_db())
         elif op == "3":
-            exportar_asistencias_excel() # <-- Aquí llamas a tu función de Pandas
+            exportar_asistencias_excel()
         elif op == "4":
+            print("Saliendo...")
             break
 
 if __name__ == "__main__":
