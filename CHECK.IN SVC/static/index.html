@@ -78,9 +78,14 @@
             transition: 0.25s ease;
         }
 
-        button:hover {
+        button:hover:not(:disabled) {
             background: var(--verde-svc);
             transform: scale(1.02);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         #resultado {
@@ -115,44 +120,57 @@
     <script>
     async function verificar() {
         const nombreInput = document.getElementById("nombreInput");
+        const boton = document.querySelector("button");
         const nombre = nombreInput.value.trim();
         const resDiv = document.getElementById("resultado");
 
         if (!nombre) return;
 
+        // Prevenir doble clic: deshabilitar botón durante la petición
+        boton.disabled = true;
         resDiv.textContent = "Buscando...";
 
         try {
-            // Usamos la URL completa por seguridad si estás en local
-            const response = await fetch(`/verificar/${nombre}`);
+            // Usar POST con body JSON para evitar problemas con espacios y caracteres especiales
+            const response = await fetch("/check-in", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ nombre: nombre })
+            });
             
             if (!response.ok) {
+                if (response.status === 404) {
+                    resDiv.innerHTML = `
+                        <span style="color:#be1e2d;">
+                            ❌ NO ENCONTRADO<br>
+                            <small>El jugador no está en la lista</small>
+                        </span>
+                    `;
+                    boton.disabled = false;
+                    return;
+                }
                 throw new Error("Error en la respuesta del servidor");
             }
 
             const data = await response.json();
 
-            if (data.existe) {
-                resDiv.innerHTML = `
-                    <span style="color:#4cd137;">
-                        ✅ BIENVENIDO/A<br>
-                        <strong>${data.nombre.toUpperCase()}</strong><br>
-                        <small>Registrado a las: ${data.hora || 'Ahora'}</small>
-                    </span>
-                `;
-                // Limpiamos el input para el próximo jugador
-                nombreInput.value = ""; 
-            } else {
-                resDiv.innerHTML = `
-                    <span style="color:#be1e2d;">
-                        ❌ NO ENCONTRADO<br>
-                        <small>El jugador no está en la lista</small>
-                    </span>
-                `;
-            }
+            resDiv.innerHTML = `
+                <span style="color:#4cd137;">
+                    ✅ BIENVENIDO/A<br>
+                    <strong>${data.nombre.toUpperCase()}</strong><br>
+                    <small>Registrado a las: ${data.hora || 'Ahora'}</small>
+                </span>
+            `;
+            // Limpiamos el input para el próximo jugador
+            nombreInput.value = ""; 
         } catch (err) {
             resDiv.innerHTML = `<span style="color:orange;">⚠️ Servidor desconectado</span>`;
             console.error("Error de conexión:", err);
+        } finally {
+            // Rehabilitar botón después de la petición
+            boton.disabled = false;
         }
     }
 

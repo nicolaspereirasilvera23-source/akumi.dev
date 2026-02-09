@@ -34,7 +34,43 @@ main.py: Punto de entrada, rutas de FastAPI y menú de administración.
 
 suarez_voley.db: Base de datos relacional.
 
-test_main.py: Pruebas de lógica y validación.
+tests/test_asistencia_db.py: Pruebas E2E con Playwright.
+
+# 🚦 Cómo Ejecutar
+
+## Instalación de Dependencias
+
+```bash
+pip install -r requirements.txt
+```
+
+## Ejecutar el Servidor Web (API + Frontend)
+
+```bash
+uvicorn main:app --reload
+```
+
+Luego abre tu navegador en: `http://127.0.0.1:8000`
+
+## Ejecutar el Menú de Consola
+
+```bash
+python main.py
+```
+
+## Ejecutar Tests
+
+**Importante**: Los tests E2E requieren que el servidor esté corriendo en `http://127.0.0.1:8000`
+
+1. Inicia el servidor en una terminal:
+   ```bash
+   uvicorn main:app
+   ```
+
+2. En otra terminal, ejecuta los tests:
+   ```bash
+   pytest tests/
+   ```
 
 # 🎯 Próximos Pasos (Roadmap)
 

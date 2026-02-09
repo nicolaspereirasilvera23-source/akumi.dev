@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 import sqlite3
 from datetime import datetime
+from pathlib import Path
 import pandas as pd 
 
 app = FastAPI()
@@ -24,7 +25,7 @@ def home():
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,  # Cambiado a False para evitar conflictos con allow_origins=["*"]
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -114,6 +115,8 @@ def registrar_asistencia_db(nombre):
         return {"exito": True}
 
 def exportar_asistencias_excel():
+    # Ruta absoluta basada en la ubicación del archivo main.py
+    ruta_excel = Path(__file__).resolve().parent / "Reporte_SVC.xlsx"
     with sqlite3.connect(DB_NAME) as conn:
         query = """
             SELECT j.nombre AS Jugador, a.fecha AS Fecha, a.hora AS Hora
@@ -122,27 +125,35 @@ def exportar_asistencias_excel():
             ORDER BY a.fecha DESC, a.hora DESC
         """
         df = pd.read_sql_query(query, conn)
-        df.to_excel("Reporte_SVC.xlsx", index=False)
-        print("✅ Reporte 'Reporte_SVC.xlsx' generado con éxito.")
+        df.to_excel(ruta_excel, index=False)
+        print(f"✅ Reporte '{ruta_excel}' generado con éxito.")
 
 # ----------------------------
 # ENDPOINTS API
 # ----------------------------
+class CheckInRequest(BaseModel):
+    nombre: str = Field(..., min_length=1, max_length=100)
+
 @app.get("/verificar/{nombre}")
 def verificar_jugador(nombre: str):
-    resultado = registrar_asistencia_db(nombre)
-    if resultado["exito"]:
-        ahora = datetime.now().strftime("%H:%M")
-        return {"existe": True, "nombre": nombre, "hora": ahora}
-    else:
-        return {"existe": False, "nombre": nombre, "hora": None}
+    """Verifica si un jugador existe (solo consulta, no registra asistencia)"""
+    with sqlite3.connect(DB_NAME) as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT id, nombre FROM jugadores WHERE LOWER(nombre)=?", (nombre.lower(),))
+        jugador = cur.fetchone()
+        if jugador:
+            return {"existe": True, "nombre": jugador[1]}
+        else:
+            return {"existe": False, "nombre": nombre}
 
-@app.post("/check-in/{nombre}")
-def check_in(nombre: str):
-    resultado = registrar_asistencia_db(nombre)
+@app.post("/check-in")
+def check_in(request: CheckInRequest):
+    """Registra la asistencia de un jugador"""
+    resultado = registrar_asistencia_db(request.nombre)
     if not resultado["exito"]:
         raise HTTPException(status_code=404, detail="Jugador no encontrado")
-    return {"mensaje": "Asistencia registrada"}
+    ahora = datetime.now().strftime("%H:%M")
+    return {"mensaje": "Asistencia registrada", "nombre": request.nombre, "hora": ahora}
 
 @app.post("/jugadores/", status_code=status.HTTP_201_CREATED)
 def crear_jugador(jugador: Jugador):

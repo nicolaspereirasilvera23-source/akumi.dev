@@ -1,8 +1,10 @@
 import sqlite3
 import pytest
+from pathlib import Path
 from playwright.sync_api import Page, expect
 
-DB_NAME = "../suarez_voley.db" # Ruta relativa desde la carpeta 'tests'
+# Ruta absoluta basada en la ubicación del archivo de test
+DB_NAME = str(Path(__file__).resolve().parent.parent / "suarez_voley.db")
 
 def test_flujo_asistencia_real(page: Page):
     nombre_test = "Akumi de Prueba"
@@ -22,10 +24,13 @@ def test_flujo_asistencia_real(page: Page):
     # Escribimos el nombre en el input
     page.get_by_placeholder("Escribí tu nombre aquí...").fill(nombre_test)
     
-    # Hacemos click en CONFIRMAR
+    # Hacemos click en CONFIRMAR (ahora usa POST /check-in con body JSON)
     page.get_by_role("button", name="CONFIRMAR").click()
     
-    # Esperamos un segundo a que el backend guarde
+    # Esperamos a que aparezca el mensaje de éxito o error
+    page.wait_for_selector("#resultado", state="visible", timeout=5000)
+    
+    # Esperamos un segundo adicional para asegurar que el backend guardó
     page.wait_for_timeout(1000)
 
     # --- VERIFICACIÓN: Consultamos la tabla 'asistencias' con un JOIN ---
