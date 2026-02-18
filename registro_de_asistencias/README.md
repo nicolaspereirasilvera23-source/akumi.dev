@@ -38,6 +38,15 @@ Abrir: `http://127.0.0.1:8000`
 python console.py
 ```
 
+## Bot de carga rapida (pruebas)
+Script con inputs para alta individual, lote manual, importacion CSV y generacion aleatoria.
+```bash
+python bot_prueba_jugadores.py
+```
+Incluye opciones para:
+- Cargar jugadores desde `Reporte_SVC.xlsx` (hoja `Jugadores`).
+- Registrar pruebas/asistencias desde `Reporte_SVC.xlsx` (hoja `Asistencias`, columna `Codigo`).
+
 ## Pruebas
 Pruebas API/unitarias (recomendado para CI):
 ```bash
