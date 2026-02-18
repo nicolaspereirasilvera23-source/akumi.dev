@@ -1,186 +1,390 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SVC - Control de Ingreso</title>
-
     <style>
         :root {
             --verde-svc: #006837;
+            --verde-brillante: #2ecc71;
             --rojo-svc: #be1e2d;
-            --negro-svc: #000000;
+            --negro-fondo: #121212;
+            --gris-card: #1e1e1e;
+            --blanco-texto: #ffffff;
         }
 
         * {
+            margin: 0;
+            padding: 0;
             box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
         }
 
         body {
-            background: linear-gradient(135deg, var(--negro-svc) 0%, #1a1a1a 100%);
-            color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--negro-fondo);
+            color: var(--blanco-texto);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            margin: 0;
-            gap: 20px;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* --- Animaciones --- */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.02);
+            }
+
+            100% {
+                transform: scale(1);
+            }
         }
 
         .logo {
-            width: 180px;
-            max-width: 80%;
-            filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
+            width: 150px;
+            margin-bottom: 20px;
+            animation: fadeInDown 0.8s ease;
         }
 
-        .container {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 30px;
-            border-radius: 20px;
-            border: 2px solid var(--verde-svc);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        .card {
+            background: var(--gris-card);
+            border-radius: 16px;
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            border: 1px solid #333;
             text-align: center;
-            width: 320px;
+            animation: fadeInDown 0.8s ease 0.2s backwards;
         }
 
         h1 {
-            font-size: 1.4rem;
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .input-group {
+            position: relative;
             margin-bottom: 20px;
-            color: white;
         }
 
         input {
             width: 100%;
-            padding: 12px;
-            margin-bottom: 15px;
-            border-radius: 8px;
-            border: 1px solid #444;
-            background: #222;
+            padding: 15px;
+            background: #2a2a2a;
+            border: 2px solid #333;
+            border-radius: 12px;
             color: white;
+            font-size: 1rem;
             outline: none;
+            transition: border-color 0.3s;
         }
 
         input:focus {
-            border-color: var(--rojo-svc);
+            border-color: var(--verde-svc);
         }
 
         button {
             width: 100%;
-            padding: 12px;
-            background: var(--rojo-svc);
+            padding: 15px;
+            background: linear-gradient(135deg, var(--rojo-svc), #900);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
+            font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
-            transition: 0.25s ease;
+            transition: transform 0.2s, opacity 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
         }
 
-        button:hover:not(:disabled) {
-            background: var(--verde-svc);
-            transform: scale(1.02);
+        button:active {
+            transform: scale(0.98);
         }
 
         button:disabled {
-            opacity: 0.6;
+            opacity: 0.7;
             cursor: not-allowed;
         }
 
-        #resultado {
-            margin-top: 20px;
-            font-weight: bold;
-            min-height: 50px;
+        /* --- Spinner --- */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            display: none;
+            /* Oculto por defecto */
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* --- Historial --- */
+        .historial {
+            margin-top: 30px;
+            text-align: left;
+            border-top: 1px solid #333;
+            padding-top: 20px;
+        }
+
+        .historial h3 {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .historial-list {
+            list-style: none;
+        }
+
+        .historial-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 0.95rem;
+            color: #ccc;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        .historial-item:last-child {
+            border-bottom: none;
+        }
+
+        .hora-badge {
+            background: #333;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+
+        /* --- Toast Notifications --- */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .toast {
+            background: #333;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease, fadeOut 0.5s ease 2.5s forwards;
+            border-left: 5px solid #888;
+            min-width: 280px;
+        }
+
+        .toast.success {
+            border-left-color: var(--verde-brillante);
+        }
+
+        .toast.error {
+            border-left-color: var(--rojo-svc);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: translateY(-10px);
+                pointer-events: none;
+            }
         }
     </style>
 </head>
 
 <body>
 
-    <!-- LOGO -->
-    <img src="/static/svc.png" alt="Suarez Voley Club" class="logo">
+    <div class="toast-container" id="toastContainer"></div>
 
-    <!-- CARD -->
-    <div class="container">
-        <h1>INGRESO DE JUGADORES</h1>
+    <img src="/static/svc.png" alt="Logo SVC" class="logo">
 
-        <input
-            type="text"
-            id="nombreInput"
-            placeholder="Escribí tu nombre aquí..."
-            autocomplete="off"
-        >
+    <div class="card">
+        <h1>CONTROL DE ACCESO</h1>
 
-        <button onclick="verificar()">CONFIRMAR</button>
+        <div class="input-group">
+            <input type="text" id="nombreInput" data-testid="nombre-input" placeholder="Ingresá tu nombre..." autocomplete="off">
+        </div>
 
-        <div id="resultado"></div>
+        <button id="btnConfirmar" data-testid="confirmar-btn" onclick="verificar()">
+            <span class="btn-text">CONFIRMAR ASISTENCIA</span>
+            <div class="spinner"></div>
+        </button>
+
+        <div class="historial">
+            <h3>Últimos Ingresos</h3>
+            <ul class="historial-list" id="listaHistorial" data-testid="historial-list">
+                <li class="historial-item" style="color:#555">Cargando...</li>
+            </ul>
+        </div>
     </div>
 
     <script>
-    async function verificar() {
-        const nombreInput = document.getElementById("nombreInput");
-        const boton = document.querySelector("button");
-        const nombre = nombreInput.value.trim();
-        const resDiv = document.getElementById("resultado");
+        const btn = document.getElementById('btnConfirmar');
+        const input = document.getElementById('nombreInput');
+        const spinner = document.querySelector('.spinner');
+        const btnText = document.querySelector('.btn-text');
+        const listaHistorial = document.getElementById('listaHistorial');
+        const toastContainer = document.getElementById('toastContainer');
 
-        if (!nombre) return;
+        async function cargarHistorial() {
+            try {
+                const res = await fetch('/asistencias/recientes');
+                if (!res.ok) return;
+                const recientes = await res.json();
 
-        // Prevenir doble clic: deshabilitar botón durante la petición
-        boton.disabled = true;
-        resDiv.textContent = "Buscando...";
-
-        try {
-            // Usar POST con body JSON para evitar problemas con espacios y caracteres especiales
-            const response = await fetch("/check-in", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ nombre: nombre })
-            });
-            
-            if (!response.ok) {
-                if (response.status === 404) {
-                    resDiv.innerHTML = `
-                        <span style="color:#be1e2d;">
-                            ❌ NO ENCONTRADO<br>
-                            <small>El jugador no está en la lista</small>
-                        </span>
-                    `;
-                    boton.disabled = false;
+                listaHistorial.innerHTML = '';
+                if (recientes.length === 0) {
+                    listaHistorial.innerHTML = '<li class="historial-item" style="color:#555">Aún no hay ingresos hoy</li>';
                     return;
                 }
-                throw new Error("Error en la respuesta del servidor");
+
+                recientes.forEach(p => {
+                    const li = document.createElement('li');
+                    li.className = 'historial-item';
+                    li.innerHTML = `
+                        <span>${capitalizar(p.nombre)}</span>
+                        <span class="hora-badge">${p.hora}</span>
+                    `;
+                    listaHistorial.appendChild(li);
+                });
+            } catch (err) {
+                console.error("Error cargando historial", err);
+            }
+        }
+
+        function setLoading(loading) {
+            btn.disabled = loading;
+            if (loading) {
+                spinner.style.display = 'block';
+                btnText.style.display = 'none';
+            } else {
+                spinner.style.display = 'none';
+                btnText.style.display = 'block';
+            }
+        }
+
+        function mostrarToast(mensaje, tipo = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${tipo}`;
+            toast.setAttribute('data-testid', 'toast-' + tipo);
+            toast.setAttribute('role', 'status');
+
+            let icono = 'ℹ️';
+            if (tipo === 'success') icono = '✅';
+            if (tipo === 'error') icono = '❌';
+
+            toast.innerHTML = `<span>${icono}</span> <span>${mensaje}</span>`;
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        function capitalizar(str) {
+            if (!str) return '';
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        async function verificar() {
+            const nombre = input.value.trim();
+            if (!nombre) {
+                mostrarToast('Por favor escribí tu nombre', 'error');
+                return;
             }
 
-            const data = await response.json();
+            setLoading(true);
 
-            resDiv.innerHTML = `
-                <span style="color:#4cd137;">
-                    ✅ BIENVENIDO/A<br>
-                    <strong>${data.nombre.toUpperCase()}</strong><br>
-                    <small>Registrado a las: ${data.hora || 'Ahora'}</small>
-                </span>
-            `;
-            // Limpiamos el input para el próximo jugador
-            nombreInput.value = ""; 
-        } catch (err) {
-            resDiv.innerHTML = `<span style="color:orange;">⚠️ Servidor desconectado</span>`;
-            console.error("Error de conexión:", err);
-        } finally {
-            // Rehabilitar botón después de la petición
-            boton.disabled = false;
+            try {
+                const res = await fetch('/check-in', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    mostrarToast(`¡Bienvenido/a ${data.nombre}!`, 'success');
+                    input.value = '';
+                    await cargarHistorial();
+                } else {
+                    if (res.status === 404) {
+                        mostrarToast('Jugador no encontrado', 'error');
+                    } else {
+                        mostrarToast('Error en el servidor', 'error');
+                    }
+                }
+            } catch (err) {
+                mostrarToast('No se pudo conectar con el servidor', 'error');
+                console.error(err);
+            } finally {
+                setLoading(false);
+                input.focus();
+            }
         }
-    }
 
-    // TIP EXTRA: Para que funcione al apretar "Enter"
-    document.getElementById("nombreInput").addEventListener("keypress", function(e) {
-        if (e.key === "Enter") {
-            verificar();
-        }
-    });
-</script>
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', cargarHistorial);
 
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') verificar();
+        });
+    </script>
 </body>
+
 </html>
+
+

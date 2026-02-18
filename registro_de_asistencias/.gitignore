@@ -210,3 +210,13 @@ __marimo__/
 __pycache__/
 venv/
 
+# Archivos generados por el sistema (Reportes)
+*.xlsx
+*.csv
+
+# Logs de Playwright (QA)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache
+

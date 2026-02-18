@@ -1,0 +1,10 @@
+stages:
+  - test
+
+unit_and_api_tests:
+  image: python:3.11
+  stage: test
+  script:
+    - python -m pip install --upgrade pip
+    - pip install -r requirements.txt
+    - pytest -q -m "not e2e"

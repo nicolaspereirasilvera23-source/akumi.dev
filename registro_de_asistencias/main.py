@@ -1,23 +1,42 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException, status
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-import sqlite3
-from datetime import datetime
-from pathlib import Path
-import pandas as pd 
 
-app = FastAPI()
+from database import (
+    agregar_jugador_db,
+    actualizar_jugador_db,
+    eliminar_jugador_db,
+    inicializar_db,
+    listar_jugadores_db,
+    obtener_jugador_db,
+    obtener_ultimos_asistentes,
+    registrar_asistencia_db,
+    verificar_jugador_db,
+)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    inicializar_db()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 # ----------------------------
-# ARCHIVOS ESTÁTICOS
+# ARCHIVOS ESTATICOS
 # ----------------------------
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 @app.get("/")
 def home():
     return FileResponse("static/index.html")
+
 
 # ----------------------------
 # CORS
@@ -25,41 +44,11 @@ def home():
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,  # Cambiado a False para evitar conflictos con allow_origins=["*"]
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ----------------------------
-# BASE DE DATOS
-# ----------------------------
-DB_NAME = "suarez_voley.db"
-
-def inicializar_db():
-    with sqlite3.connect(DB_NAME) as conexion:
-        cursor = conexion.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS jugadores (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nombre TEXT NOT NULL UNIQUE,
-                edad INTEGER,
-                tiempo INTEGER
-            )
-        """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS asistencias (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                jugador_id INTEGER NOT NULL,
-                fecha TEXT NOT NULL,
-                hora TEXT NOT NULL,
-                presente INTEGER DEFAULT 1
-            )
-        """)
-        conexion.commit()
-
-@app.on_event("startup")
-def startup_event():
-    inicializar_db()
 
 # ----------------------------
 # MODELOS
@@ -69,131 +58,107 @@ class Jugador(BaseModel):
     edad: int = Field(..., gt=0, le=120)
     tiempo: int = Field(..., ge=0, le=80)
 
-# ----------------------------
-# LÓGICA DB
-# ----------------------------
-def agregar_jugador_db(nombre, edad, tiempo):
-    with sqlite3.connect(DB_NAME) as conn:
-        cur = conn.cursor()
-        try:
-            cur.execute(
-                "INSERT INTO jugadores (nombre, edad, tiempo) VALUES (?, ?, ?)",
-                (nombre, edad, tiempo)
-            )
-            conn.commit()
-            return {"exito": True}
-        except sqlite3.IntegrityError:
-            return {"exito": False, "mensaje": "Jugador ya existe"}
 
-def listar_jugadores_db():
-    with sqlite3.connect(DB_NAME) as conn:
-        cur = conn.cursor()
-        cur.execute("SELECT id, nombre, edad, tiempo FROM jugadores")
-        filas = cur.fetchall()
-        return [
-            {"id": f[0], "nombre": f[1], "edad": f[2], "tiempo": f[3]}
-            for f in filas
-        ]
+class CheckInRequest(BaseModel):
+    nombre: str = Field(..., min_length=1, max_length=100)
 
-def registrar_asistencia_db(nombre):
-    with sqlite3.connect(DB_NAME) as conn:
-        cur = conn.cursor()
-        cur.execute("SELECT id FROM jugadores WHERE LOWER(nombre)=?", (nombre.lower(),))
-        jugador = cur.fetchone()
-
-        if not jugador:
-            return {"exito": False}
-
-        fecha = datetime.now().strftime("%Y-%m-%d")
-        hora = datetime.now().strftime("%H:%M")
-
-        cur.execute(
-            "INSERT INTO asistencias (jugador_id, fecha, hora) VALUES (?, ?, ?)",
-            (jugador[0], fecha, hora)
-        )
-        conn.commit()
-        return {"exito": True}
-
-def exportar_asistencias_excel():
-    # Ruta absoluta basada en la ubicación del archivo main.py
-    ruta_excel = Path(__file__).resolve().parent / "Reporte_SVC.xlsx"
-    with sqlite3.connect(DB_NAME) as conn:
-        query = """
-            SELECT j.nombre AS Jugador, a.fecha AS Fecha, a.hora AS Hora
-            FROM asistencias a
-            JOIN jugadores j ON a.jugador_id = j.id
-            ORDER BY a.fecha DESC, a.hora DESC
-        """
-        df = pd.read_sql_query(query, conn)
-        df.to_excel(ruta_excel, index=False)
-        print(f"✅ Reporte '{ruta_excel}' generado con éxito.")
 
 # ----------------------------
 # ENDPOINTS API
 # ----------------------------
-class CheckInRequest(BaseModel):
-    nombre: str = Field(..., min_length=1, max_length=100)
-
 @app.get("/verificar/{nombre}")
 def verificar_jugador(nombre: str):
-    """Verifica si un jugador existe (solo consulta, no registra asistencia)"""
-    with sqlite3.connect(DB_NAME) as conn:
-        cur = conn.cursor()
-        cur.execute("SELECT id, nombre FROM jugadores WHERE LOWER(nombre)=?", (nombre.lower(),))
-        jugador = cur.fetchone()
-        if jugador:
-            return {"existe": True, "nombre": jugador[1]}
-        else:
-            return {"existe": False, "nombre": nombre}
+    """Verifica si un jugador existe (solo consulta, no registra asistencia)."""
+    try:
+        return verificar_jugador_db(nombre)
+    except Exception as err:
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor: {err}")
+
+
+@app.get("/asistencias/recientes")
+def obtener_recientes():
+    """Devuelve los ultimos asistentes del dia."""
+    try:
+        return obtener_ultimos_asistentes()
+    except Exception as err:
+        raise HTTPException(status_code=500, detail=f"Error obteniendo recientes: {err}")
+
 
 @app.post("/check-in")
 def check_in(request: CheckInRequest):
-    """Registra la asistencia de un jugador"""
-    resultado = registrar_asistencia_db(request.nombre)
-    if not resultado["exito"]:
-        raise HTTPException(status_code=404, detail="Jugador no encontrado")
-    ahora = datetime.now().strftime("%H:%M")
-    return {"mensaje": "Asistencia registrada", "nombre": request.nombre, "hora": ahora}
+    """Registra la asistencia de un jugador."""
+    try:
+        resultado = registrar_asistencia_db(request.nombre)
+        if not resultado["exito"]:
+            raise HTTPException(status_code=404, detail="Jugador no encontrado")
+        return {
+            "mensaje": "Asistencia registrada",
+            "nombre": resultado["nombre"],
+            "hora": resultado["hora"],
+        }
+    except Exception as err:
+        if isinstance(err, HTTPException):
+            raise err
+        raise HTTPException(status_code=500, detail=f"Error interno al registrar asistencia: {err}")
+
 
 @app.post("/jugadores/", status_code=status.HTTP_201_CREATED)
 def crear_jugador(jugador: Jugador):
-    res = agregar_jugador_db(jugador.nombre, jugador.edad, jugador.tiempo)
-    if not res["exito"]:
-        raise HTTPException(status_code=400, detail=res["mensaje"])
-    return {"mensaje": "Jugador creado"}
+    try:
+        res = agregar_jugador_db(jugador.nombre, jugador.edad, jugador.tiempo)
+        if not res["exito"]:
+            raise HTTPException(status_code=400, detail=res["mensaje"])
+        return {"mensaje": "Jugador creado", "id": res.get("id")}
+    except Exception as err:
+        if isinstance(err, HTTPException):
+            raise err
+        raise HTTPException(status_code=500, detail=f"Error al crear jugador: {err}")
+
 
 @app.get("/jugadores/")
-def listar():
-    return listar_jugadores_db()
+def listar_jugadores():
+    try:
+        return listar_jugadores_db()
+    except Exception as err:
+        raise HTTPException(status_code=500, detail=f"Error al listar jugadores: {err}")
 
-# ----------------------------
-# CONSOLA
-# ----------------------------
-def menu_consola():
-    while True:
-        print("\n🏐 SUAREZ VOLEY CLUB")
-        print("1. Agregar jugador")
-        print("2. Listar jugadores")
-        print("3. Generar Reporte Excel")
-        print("4. Salir")
-        op = input("Opción: ")
 
-        if op == "1":
-            try:
-                nombre = input("Nombre: ")
-                edad = int(input("Edad: "))
-                tiempo = int(input("Tiempo: "))
-                print(agregar_jugador_db(nombre, edad, tiempo))
-            except ValueError:
-                print("Error: Edad y Tiempo deben ser números.")
-        elif op == "2":
-            print(listar_jugadores_db())
-        elif op == "3":
-            exportar_asistencias_excel()
-        elif op == "4":
-            print("Saliendo...")
-            break
+@app.get("/jugadores/{jugador_id}")
+def obtener_jugador(jugador_id: int):
+    try:
+        jugador = obtener_jugador_db(jugador_id)
+        if not jugador:
+            raise HTTPException(status_code=404, detail="Jugador no encontrado")
+        return jugador
+    except Exception as err:
+        if isinstance(err, HTTPException):
+            raise err
+        raise HTTPException(status_code=500, detail=f"Error al obtener jugador: {err}")
 
-if __name__ == "__main__":
-    inicializar_db()
-    menu_consola()
+
+@app.put("/jugadores/{jugador_id}")
+def actualizar_jugador(jugador_id: int, jugador: Jugador):
+    try:
+        res = actualizar_jugador_db(jugador_id, jugador.nombre, jugador.edad, jugador.tiempo)
+        if not res["exito"]:
+            if res["mensaje"] == "Jugador no encontrado":
+                raise HTTPException(status_code=404, detail=res["mensaje"])
+            raise HTTPException(status_code=400, detail=res["mensaje"])
+        return {"mensaje": "Jugador actualizado"}
+    except Exception as err:
+        if isinstance(err, HTTPException):
+            raise err
+        raise HTTPException(status_code=500, detail=f"Error al actualizar jugador: {err}")
+
+
+@app.delete("/jugadores/{jugador_id}")
+def eliminar_jugador(jugador_id: int):
+    try:
+        res = eliminar_jugador_db(jugador_id)
+        if not res["exito"]:
+            raise HTTPException(status_code=404, detail=res["mensaje"])
+        return {"mensaje": "Jugador eliminado"}
+    except Exception as err:
+        if isinstance(err, HTTPException):
+            raise err
+        raise HTTPException(status_code=500, detail=f"Error al eliminar jugador: {err}")

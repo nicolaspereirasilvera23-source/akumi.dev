@@ -1,81 +1,53 @@
-# akumi.dev🏐 Suarez Voley Club – Sistema de Gestión de Ingresos
-Junior Back-end Developer | akumi.dev – Beta Repository
+# akumi.dev - Suarez Voley Club (Registro de Asistencias)
 
-Este proyecto es un sistema de gestión integral para un club de voley, diseñado para automatizar el registro de asistencia y la generación de reportes administrativos. Desarrollado con un enfoque en la eficiencia del backend y la integridad de los datos.
+Proyecto backend/fullstack junior con API REST en FastAPI, persistencia en SQLite y pruebas automatizadas.
 
-# 🚀 Tecnologías y Herramientas
-Lenguaje: Python 3.x
+## Stack
+- Python 3.x
+- FastAPI + Uvicorn
+- SQLite
+- Pandas + Openpyxl (exportacion de reporte Excel)
+- Frontend HTML/CSS/JS
+- Pytest + Playwright
 
-Framework Web: FastAPI (API REST de alta performance)
+## Funcionalidades
+- CRUD de jugadores (crear, listar, obtener por id, actualizar, eliminar).
+- Check-in de asistencia por nombre.
+- Endpoint de ultimos ingresos del dia.
+- Exportacion de asistencias a Excel.
+- Interfaz web para check-in y CLI administrativa.
 
-Base de Datos: SQLite3 (Persistencia de datos estructurada)
+## Estructura
+- `main.py`: API FastAPI.
+- `database.py`: logica SQL y operaciones de datos.
+- `console.py`: menu de administracion por consola.
+- `static/index.html`: interfaz web.
+- `tests/test_api.py`: pruebas API (rapidas).
+- `tests/test_asistencia_db.py`: prueba E2E con navegador.
 
-Procesamiento de Datos: Pandas & Openpyxl (Generación de reportes automáticos en Excel)
-
-Frontend: Vanilla HTML5, CSS3 (Custom properties) y JavaScript Asíncrono (Fetch API)
-
-# 🛠️ Funcionalidades Implementadas
-Gestión de Jugadores: CRUD completo para administración de socios.
-
-Registro Automático de Asistencia: Sistema de check-in con validación en tiempo real y registro de timestamps.
-
-Reportes Administrativos: Módulo de exportación de datos a Excel mediante análisis con Pandas.
-
-Interfaz de Consola & Web: Dualidad de interfaz para administración interna (CLI) y uso de usuarios (Web).
-
-Validación de Datos: Uso de Pydantic para garantizar la integridad de la información entrante.
-
-# 📂 Arquitectura del Proyecto
-El proyecto sigue una estructura clara de separación de responsabilidades:
-
-main.py: Punto de entrada, rutas de FastAPI y menú de administración.
-
-/static: Interfaz de usuario y activos estáticos.
-
-suarez_voley.db: Base de datos relacional.
-
-tests/test_asistencia_db.py: Pruebas E2E con Playwright.
-
-# 🚦 Cómo Ejecutar
-
-## Instalación de Dependencias
-
+## Como ejecutar
 ```bash
 pip install -r requirements.txt
-```
-
-## Ejecutar el Servidor Web (API + Frontend)
-
-```bash
 uvicorn main:app --reload
 ```
+Abrir: `http://127.0.0.1:8000`
 
-Luego abre tu navegador en: `http://127.0.0.1:8000`
-
-## Ejecutar el Menú de Consola
-
+## Consola administrativa
 ```bash
-python main.py
+python console.py
 ```
 
-## Ejecutar Tests
+## Pruebas
+Pruebas API/unitarias (recomendado para CI):
+```bash
+pytest -q -m "not e2e"
+```
 
-**Importante**: Los tests E2E requieren que el servidor esté corriendo en `http://127.0.0.1:8000`
+Prueba E2E (requiere servidor en ejecucion y navegador Playwright):
+```bash
+uvicorn main:app
+pytest -q -m e2e tests/test_asistencia_db.py
+```
 
-1. Inicia el servidor en una terminal:
-   ```bash
-   uvicorn main:app
-   ```
-
-2. En otra terminal, ejecuta los tests:
-   ```bash
-   pytest tests/
-   ```
-
-# 🎯 Próximos Pasos (Roadmap)
-
-[ ] Implementar autenticación para el panel administrativo.
-
-[ ] Automatizar el envío de reportes semanales por email.
-
-[ ] Integrar un sistema de estadísticas visuales de asistencia.
+## CI
+Incluye pipeline base para GitLab en `.gitlab-ci.yml`, ejecutando `pytest -m "not e2e"`.

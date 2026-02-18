@@ -1,50 +1,50 @@
 import sqlite3
-import pytest
+from datetime import datetime
 from pathlib import Path
+
+import pytest
 from playwright.sync_api import Page, expect
 
-# Ruta absoluta basada en la ubicación del archivo de test
+from database import inicializar_db
+
 DB_NAME = str(Path(__file__).resolve().parent.parent / "suarez_voley.db")
 
+
+@pytest.mark.e2e
 def test_flujo_asistencia_real(page: Page):
+    inicializar_db()
     nombre_test = "Akumi de Prueba"
-    
-    # --- PREPARACIÓN: Asegurar que el jugador existe en la DB ---
+    fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+
+    # --- PREPARACION: Asegurar que el jugador existe en la DB ---
     with sqlite3.connect(DB_NAME) as conn:
         cur = conn.cursor()
-        # Lo borramos si ya existe para que el test sea limpio
-        cur.execute("DELETE FROM jugadores WHERE nombre = ?", (nombre_test,))
-        # Lo creamos
-        cur.execute("INSERT INTO jugadores (nombre, edad, tiempo) VALUES (?, ?, ?)", (nombre_test, 25, 10))
+        cur.execute("DELETE FROM asistencias WHERE jugador_id IN (SELECT id FROM jugadores WHERE LOWER(nombre) = ?)", (nombre_test.lower(),))
+        cur.execute("DELETE FROM jugadores WHERE LOWER(nombre) = ?", (nombre_test.lower(),))
+        cur.execute(
+            "INSERT INTO jugadores (nombre, edad, tiempo) VALUES (?, ?, ?)",
+            (nombre_test, 25, 10),
+        )
         conn.commit()
 
-    # --- ACCIÓN: El Robot marca asistencia ---
+    # --- ACCION: El usuario marca asistencia ---
     page.goto("http://127.0.0.1:8000")
-    
-    # Escribimos el nombre en el input
-    page.get_by_placeholder("Escribí tu nombre aquí...").fill(nombre_test)
-    
-    # Hacemos click en CONFIRMAR (ahora usa POST /check-in con body JSON)
-    page.get_by_role("button", name="CONFIRMAR").click()
-    
-    # Esperamos a que aparezca el mensaje de éxito o error
-    page.wait_for_selector("#resultado", state="visible", timeout=5000)
-    
-    # Esperamos un segundo adicional para asegurar que el backend guardó
-    page.wait_for_timeout(1000)
+    page.get_by_test_id("nombre-input").fill(nombre_test)
+    page.get_by_test_id("confirmar-btn").click()
 
-    # --- VERIFICACIÓN: Consultamos la tabla 'asistencias' con un JOIN ---
+    # Confirmamos feedback visual de exito
+    expect(page.get_by_test_id("toast-success")).to_be_visible(timeout=5000)
+
+    # --- VERIFICACION: Se guarda en DB ---
     with sqlite3.connect(DB_NAME) as conn:
         cur = conn.cursor()
         query = """
-            SELECT a.id 
+            SELECT COUNT(*)
             FROM asistencias a
             JOIN jugadores j ON a.jugador_id = j.id
-            WHERE j.nombre = ?
+            WHERE LOWER(j.nombre) = ? AND a.fecha = ?
         """
-        cur.execute(query, (nombre_test,))
-        asistencia = cur.fetchone()
+        cur.execute(query, (nombre_test.lower(), fecha_hoy))
+        total = cur.fetchone()[0]
 
-    # Si asistencia no es None, ¡el test pasó!
-    assert asistencia is not None, f"No se encontró registro de asistencia para {nombre_test}"
-    print(f"\n✅ Golazo: {nombre_test} marcó presente y se guardó en la DB.")
+    assert total >= 1, f"No se encontro registro de asistencia para {nombre_test}"
