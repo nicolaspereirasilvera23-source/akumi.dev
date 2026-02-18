@@ -60,17 +60,17 @@ class Jugador(BaseModel):
 
 
 class CheckInRequest(BaseModel):
-    nombre: str = Field(..., min_length=1, max_length=100)
+    codigo: str = Field(..., pattern=r"^\d{4}$")
 
 
 # ----------------------------
 # ENDPOINTS API
 # ----------------------------
-@app.get("/verificar/{nombre}")
-def verificar_jugador(nombre: str):
-    """Verifica si un jugador existe (solo consulta, no registra asistencia)."""
+@app.get("/verificar/{codigo}")
+def verificar_jugador(codigo: str):
+    """Verifica si un jugador existe por codigo de 4 digitos."""
     try:
-        return verificar_jugador_db(nombre)
+        return verificar_jugador_db(codigo)
     except Exception as err:
         raise HTTPException(status_code=500, detail=f"Error interno del servidor: {err}")
 
@@ -86,15 +86,16 @@ def obtener_recientes():
 
 @app.post("/check-in")
 def check_in(request: CheckInRequest):
-    """Registra la asistencia de un jugador."""
+    """Registra la asistencia de un jugador usando su codigo."""
     try:
-        resultado = registrar_asistencia_db(request.nombre)
+        resultado = registrar_asistencia_db(request.codigo)
         if not resultado["exito"]:
-            raise HTTPException(status_code=404, detail="Jugador no encontrado")
+            raise HTTPException(status_code=404, detail="Codigo no encontrado")
         return {
             "mensaje": "Asistencia registrada",
             "nombre": resultado["nombre"],
             "hora": resultado["hora"],
+            "codigo": resultado["codigo"],
         }
     except Exception as err:
         if isinstance(err, HTTPException):
@@ -108,7 +109,11 @@ def crear_jugador(jugador: Jugador):
         res = agregar_jugador_db(jugador.nombre, jugador.edad, jugador.tiempo)
         if not res["exito"]:
             raise HTTPException(status_code=400, detail=res["mensaje"])
-        return {"mensaje": "Jugador creado", "id": res.get("id")}
+        return {
+            "mensaje": "Jugador creado",
+            "id": res.get("id"),
+            "codigo": res.get("codigo"),
+        }
     except Exception as err:
         if isinstance(err, HTTPException):
             raise err

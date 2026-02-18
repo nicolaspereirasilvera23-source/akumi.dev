@@ -12,9 +12,10 @@ Proyecto backend/fullstack junior con API REST en FastAPI, persistencia en SQLit
 
 ## Funcionalidades
 - CRUD de jugadores (crear, listar, obtener por id, actualizar, eliminar).
-- Check-in de asistencia por nombre.
+- Generacion automatica de codigo de 4 digitos por jugador.
+- Check-in de asistencia por codigo.
 - Endpoint de ultimos ingresos del dia.
-- Exportacion de asistencias a Excel.
+- Exportacion automatica a `Reporte_SVC.xlsx` en cada alta/edicion/baja/asistencia.
 - Interfaz web para check-in y CLI administrativa.
 
 ## Estructura

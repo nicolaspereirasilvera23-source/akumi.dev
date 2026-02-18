@@ -33,7 +33,6 @@
             padding: 20px;
         }
 
-        /* --- Animaciones --- */
         @keyframes fadeInDown {
             from {
                 opacity: 0;
@@ -43,20 +42,6 @@
             to {
                 opacity: 1;
                 transform: translateY(0);
-            }
-        }
-
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-            }
-
-            50% {
-                transform: scale(1.02);
-            }
-
-            100% {
-                transform: scale(1);
             }
         }
 
@@ -98,6 +83,8 @@
             border-radius: 12px;
             color: white;
             font-size: 1rem;
+            text-align: center;
+            letter-spacing: 2px;
             outline: none;
             transition: border-color 0.3s;
         }
@@ -132,7 +119,6 @@
             cursor: not-allowed;
         }
 
-        /* --- Spinner --- */
         .spinner {
             width: 20px;
             height: 20px;
@@ -141,7 +127,6 @@
             border-top-color: white;
             animation: spin 1s ease-in-out infinite;
             display: none;
-            /* Oculto por defecto */
         }
 
         @keyframes spin {
@@ -150,7 +135,6 @@
             }
         }
 
-        /* --- Historial --- */
         .historial {
             margin-top: 30px;
             text-align: left;
@@ -191,7 +175,6 @@
             color: #aaa;
         }
 
-        /* --- Toast Notifications --- */
         .toast-container {
             position: fixed;
             top: 20px;
@@ -254,16 +237,17 @@
         <h1>CONTROL DE ACCESO</h1>
 
         <div class="input-group">
-            <input type="text" id="nombreInput" data-testid="nombre-input" placeholder="Ingresá tu nombre..." autocomplete="off">
+            <input type="text" id="codigoInput" data-testid="codigo-input" placeholder="Ingresa tu codigo de 4 digitos"
+                maxlength="4" inputmode="numeric" autocomplete="off">
         </div>
 
-        <button id="btnConfirmar" data-testid="confirmar-btn" onclick="verificar()">
+        <button id="btnConfirmar" data-testid="confirmar-btn" onclick="verificarYConfirmar()">
             <span class="btn-text">CONFIRMAR ASISTENCIA</span>
             <div class="spinner"></div>
         </button>
 
         <div class="historial">
-            <h3>Últimos Ingresos</h3>
+            <h3>Ultimos ingresos</h3>
             <ul class="historial-list" id="listaHistorial" data-testid="historial-list">
                 <li class="historial-item" style="color:#555">Cargando...</li>
             </ul>
@@ -272,7 +256,7 @@
 
     <script>
         const btn = document.getElementById('btnConfirmar');
-        const input = document.getElementById('nombreInput');
+        const input = document.getElementById('codigoInput');
         const spinner = document.querySelector('.spinner');
         const btnText = document.querySelector('.btn-text');
         const listaHistorial = document.getElementById('listaHistorial');
@@ -286,7 +270,7 @@
 
                 listaHistorial.innerHTML = '';
                 if (recientes.length === 0) {
-                    listaHistorial.innerHTML = '<li class="historial-item" style="color:#555">Aún no hay ingresos hoy</li>';
+                    listaHistorial.innerHTML = '<li class="historial-item" style="color:#555">Aun no hay ingresos hoy</li>';
                     return;
                 }
 
@@ -294,13 +278,13 @@
                     const li = document.createElement('li');
                     li.className = 'historial-item';
                     li.innerHTML = `
-                        <span>${capitalizar(p.nombre)}</span>
+                        <span>${capitalizar(p.nombre)} (#${p.codigo})</span>
                         <span class="hora-badge">${p.hora}</span>
                     `;
                     listaHistorial.appendChild(li);
                 });
             } catch (err) {
-                console.error("Error cargando historial", err);
+                console.error('Error cargando historial', err);
             }
         }
 
@@ -321,9 +305,9 @@
             toast.setAttribute('data-testid', 'toast-' + tipo);
             toast.setAttribute('role', 'status');
 
-            let icono = 'ℹ️';
-            if (tipo === 'success') icono = '✅';
-            if (tipo === 'error') icono = '❌';
+            let icono = 'i';
+            if (tipo === 'success') icono = 'OK';
+            if (tipo === 'error') icono = 'X';
 
             toast.innerHTML = `<span>${icono}</span> <span>${mensaje}</span>`;
             toastContainer.appendChild(toast);
@@ -338,34 +322,37 @@
             return str.charAt(0).toUpperCase() + str.slice(1);
         }
 
-        async function verificar() {
-            const nombre = input.value.trim();
-            if (!nombre) {
-                mostrarToast('Por favor escribí tu nombre', 'error');
+        async function verificarYConfirmar() {
+            const codigo = input.value.trim();
+            if (!/^\d{4}$/.test(codigo)) {
+                mostrarToast('Ingresa un codigo valido de 4 digitos', 'error');
                 return;
             }
 
             setLoading(true);
 
             try {
-                const res = await fetch('/check-in', {
+                const verificacionRes = await fetch(`/verificar/${codigo}`);
+                const verificacionData = await verificacionRes.json();
+
+                if (!verificacionRes.ok || !verificacionData.existe) {
+                    mostrarToast('Codigo no encontrado', 'error');
+                    return;
+                }
+
+                const checkInRes = await fetch('/check-in', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nombre })
+                    body: JSON.stringify({ codigo })
                 });
+                const data = await checkInRes.json();
 
-                const data = await res.json();
-
-                if (res.ok) {
-                    mostrarToast(`¡Bienvenido/a ${data.nombre}!`, 'success');
+                if (checkInRes.ok) {
+                    mostrarToast(`Bienvenido/a ${data.nombre}`, 'success');
                     input.value = '';
                     await cargarHistorial();
                 } else {
-                    if (res.status === 404) {
-                        mostrarToast('Jugador no encontrado', 'error');
-                    } else {
-                        mostrarToast('Error en el servidor', 'error');
-                    }
+                    mostrarToast('Error en el servidor', 'error');
                 }
             } catch (err) {
                 mostrarToast('No se pudo conectar con el servidor', 'error');
@@ -376,15 +363,12 @@
             }
         }
 
-        // Event Listeners
         document.addEventListener('DOMContentLoaded', cargarHistorial);
 
         input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') verificar();
+            if (e.key === 'Enter') verificarYConfirmar();
         });
     </script>
 </body>
 
 </html>
-
-
